@@ -1,0 +1,70 @@
+import sys
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QVBoxLayout, QPushButton, QWidget,
+    QLabel, QLineEdit, QFormLayout, QMessageBox, QComboBox
+)
+from bd_v import Komanda, Connect
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("СуперВалейбол")
+        self.setGeometry(100, 100, 400, 400)
+
+        layout = QVBoxLayout()
+        
+        self.label = QLabel("Добро пожаловать!")
+        layout.addWidget(self.label)
+
+        # Форма для удаления команды
+        self.komanda_form = QFormLayout()
+        self.komanda_selector = QComboBox()
+        self.komanda_form.addRow("Выберите Команду для удаления:", self.komanda_selector)
+        
+        layout.addLayout(self.komanda_form)
+
+        self.load_button = QPushButton("Загрузить данные")
+        self.load_button.clicked.connect(self.load_data)
+        layout.addWidget(self.load_button)
+
+        self.delete_komanda_button = QPushButton("Удалить Команду")
+        self.delete_komanda_button.clicked.connect(self.delete_komanda)
+        layout.addWidget(self.delete_komanda_button)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+    def load_data(self):
+        session = Connect.create_session()
+        # Загружаем команды в выпадающий список
+        self.komanda_selector.clear()
+        команды = session.query(Komanda).all()
+        for команда in команды:
+            self.komanda_selector.addItem(команда.nazvanie, команда.id)  # Сохраняем ID команды
+        session.close()
+
+    def delete_komanda(self):
+        selected_id = self.komanda_selector.currentData()
+
+        if selected_id:
+            session = Connect.create_session()
+            команда = session.query(Komanda).get(selected_id)
+            if команда:
+                session.delete(команда)
+                session.commit()
+                QMessageBox.information(self, "Успех", "Команда успешно удалена!")
+                self.load_data()  # Обновляем список команд
+            session.close()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Пожалуйста, выберите команду для удаления.")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
+
+
+
+для начала надо удалить id

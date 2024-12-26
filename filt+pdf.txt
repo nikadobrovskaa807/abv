@@ -1,0 +1,105 @@
+import sys
+import os
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QVBoxLayout, QPushButton, QWidget,
+    QLabel, QLineEdit, QFormLayout, QMessageBox, QComboBox
+)
+from bd_v import Komanda, Connect
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("СуперВалейбол")
+        self.setGeometry(100, 100, 400, 400)
+
+        layout = QVBoxLayout()
+        
+        self.label = QLabel("Добро пожаловать!")
+        layout.addWidget(self.label)
+
+        # Форма для поиска команды
+        self.search_form = QFormLayout()
+        self.search_input = QLineEdit()
+        self.search_form.addRow("Введите название команды для фильтрации:", self.search_input)
+        
+        layout.addLayout(self.search_form)
+
+        self.komanda_selector = QComboBox()
+        layout.addWidget(self.komanda_selector)
+
+        self.load_button = QPushButton("Загрузить все команды")
+        self.load_button.clicked.connect(self.load_data)
+        layout.addWidget(self.load_button)
+        
+        self.report_button = QPushButton("Создать PDF отчет")
+        self.report_button.clicked.connect(self.create_pdf_report)
+        layout.addWidget(self.report_button)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+        # Подключаем сигнал изменения текста к методу фильтрации
+        self.search_input.textChanged.connect(self.filter_komanda)
+
+        self.load_data()  # Загружаем данные при инициализации
+
+    def load_data(self):
+        session = Connect.create_session()
+        # Загружаем команды в выпадающий список
+        self.komanda_selector.clear()
+        команды = session.query(Komanda).all()
+        for команда in команды:
+            self.komanda_selector.addItem(команда.nazvanie, команда.id)  # Сохраняем ID команды
+        session.close()
+
+    def filter_komanda(self):
+        search_text = self.search_input.text().strip()
+        session = Connect.create_session()
+        
+        if search_text:
+            # Фильтрация команд по названию
+            команды = session.query(Komanda).filter(Komanda.nazvanie.ilike(f"%{search_text}%")).all()
+            self.komanda_selector.clear()
+            for команда in команды:
+                self.komanda_selector.addItem(команда.nazvanie, команда.id)  # Сохраняем ID команды
+            
+            if not команды:
+                self.komanda_selector.addItem("Команды не найдены", None)  # Сообщение о ненайденных командах
+        else:
+            self.load_data()  # Если поле пустое, загружаем все команды
+
+        session.close()
+        
+    def create_pdf_report(self):
+        session = Connect.create_session()
+        команды = session.query(Komanda).all()
+        session.close()
+
+        # Определяем путь для сохранения PDF
+        pdf_path = os.path.join(os.path.dirname(__file__), "report.pdf")
+
+        # Создаем PDF
+        c = canvas.Canvas(pdf_path, pagesize=letter)
+        c.drawString(100, 750, "Отчет по командам")
+        c.drawString(100, 730, "----------------------")
+
+        y = 700
+        for команда in команды:
+            c.drawString(100, y, f"Команда: {команда.nazvanie}, ID: {команда.id}")
+            y -= 20  # Сдвигаем вниз для следующей строки
+
+        c.save()
+
+        QMessageBox.information(self, "Успех", f"PDF отчет успешно создан: {pdf_path}")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
+
+
+короче таблицу бд заполнять надо на англ

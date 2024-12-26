@@ -1,0 +1,56 @@
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+
+Base = declarative_base()
+
+class Trener(Base):
+    __tablename__ = "trener"
+    id = Column(Integer, primary_key=True)
+    fio = Column(String(255), nullable=False)
+    opyt_rabotyi = Column(Integer)
+
+class Komanda(Base):
+    __tablename__ = "komanda"
+    id = Column(Integer, primary_key=True)
+    nazvanie = Column(String(255), nullable=False)
+    trener_id = Column(Integer, ForeignKey("trener.id"))
+    trener = relationship("Trener")
+
+class Igrok(Base):
+    __tablename__ = "igrok"
+    id = Column(Integer, primary_key=True)
+    fio = Column(String(255), nullable=False)
+    komanda_id = Column(Integer, ForeignKey("komanda.id"))
+    poziciya = Column(String(50))
+    nomer = Column(Integer)
+    komanda = relationship("Komanda")
+
+class Match(Base):
+    __tablename__ = "matchh"
+    id = Column(Integer, primary_key=True)
+    komanda1_id = Column(Integer, ForeignKey("komanda.id"))
+    komanda2_id = Column(Integer, ForeignKey("komanda.id"))
+    data_matcha = Column(DateTime)
+    mesto = Column(String(255))
+    komanda1 = relationship("Komanda", foreign_keys=[komanda1_id])
+    komanda2 = relationship("Komanda", foreign_keys=[komanda2_id])
+
+class StatistikaMatcha(Base):
+    __tablename__ = "statistika_matcha"
+    id = Column(Integer, primary_key=True)
+    match_id = Column(Integer, ForeignKey("matchh.id"))
+    igrok_id = Column(Integer, ForeignKey("igrok.id"))
+    ochki = Column(Integer)
+    asisty = Column(Integer)
+    bloki = Column(Integer)
+    matchh = relationship("Match")
+    igrok = relationship("Igrok")
+
+class Connect:
+    @staticmethod
+    def create_session():
+        engine = create_engine("postgresql://postgres:@localhost:5432/postgres")
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        return session

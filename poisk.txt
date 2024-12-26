@@ -1,0 +1,75 @@
+import sys
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QVBoxLayout, QPushButton, QWidget,
+    QLabel, QLineEdit, QFormLayout, QMessageBox, QComboBox
+)
+from bd_v import Komanda, Connect
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("СуперВалейбол")
+        self.setGeometry(100, 100, 400, 400)
+
+        layout = QVBoxLayout()
+        
+        self.label = QLabel("Добро пожаловать!")
+        layout.addWidget(self.label)
+
+        # Форма для поиска команды
+        self.search_form = QFormLayout()
+        self.search_input = QLineEdit()
+        self.search_form.addRow("Введите название команды для поиска:", self.search_input)
+        
+        layout.addLayout(self.search_form)
+
+        self.search_button = QPushButton("Поиск команды")
+        self.search_button.clicked.connect(self.search_komanda)
+        layout.addWidget(self.search_button)
+
+        self.komanda_selector = QComboBox()
+        layout.addWidget(self.komanda_selector)
+
+        self.load_button = QPushButton("Загрузить все команды")
+        self.load_button.clicked.connect(self.load_data)
+        layout.addWidget(self.load_button)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+    def load_data(self):
+        session = Connect.create_session()
+        # Загружаем команды в выпадающий список
+        self.komanda_selector.clear()
+        команды = session.query(Komanda).all()
+        for команда in команды:
+            self.komanda_selector.addItem(команда.nazvanie, команда.id)  # Сохраняем ID команды
+        session.close()
+
+    def search_komanda(self):
+        search_text = self.search_input.text().strip()
+        session = Connect.create_session()
+        
+        if search_text:
+            # Поиск команды по названию
+            команды = session.query(Komanda).filter(Komanda.nazvanie.ilike(f"%{search_text}%")).all()
+            self.komanda_selector.clear()
+            for команда in команды:
+                self.komanda_selector.addItem(команда.nazvanie, команда.id)  # Сохраняем ID команды
+            
+            if not команды:
+                QMessageBox.information(self, "Результат поиска", "Команды не найдены.")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Введите название команды для поиска.")
+
+        session.close()
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
+
+
+писать полностью
